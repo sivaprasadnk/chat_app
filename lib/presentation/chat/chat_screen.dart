@@ -1,10 +1,14 @@
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:chatapp/core/constants.dart';
 import 'package:chatapp/models/chat_model.dart';
 import 'package:chatapp/models/message_model.dart';
 import 'package:chatapp/presentation/components/reply_message_card.dart';
 import 'package:chatapp/presentation/components/sender_message_card.dart';
+import 'package:chatapp/presentation/video_call/video_call_screen.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ChatScreen extends StatefulWidget {
@@ -21,6 +25,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+
+  ClientRoleType? role = ClientRoleType.clientRoleBroadcaster;
+
   bool showEmojiPicker = false;
   bool showMic = true;
 
@@ -33,6 +40,12 @@ class _ChatScreenState extends State<ChatScreen> {
   late IO.Socket socket;
 
   List<MessageModel> messages = [];
+
+ 
+
+  _handlePermission(Permission permission) async {
+    await permission.request();
+  }
 
   @override
   void initState() {
@@ -151,6 +164,63 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
             onPressed: () {
               //
+              showDialog(
+                context: context,
+                builder: (_) {
+                  return StatefulBuilder(
+                    builder: (context, setState) {
+                      return AlertDialog(
+                        title: Text('Join as'),
+                        content: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RadioListTile(
+                              title: Text('Broadcaster'),
+                              value: ClientRoleType.clientRoleBroadcaster,
+                              groupValue: role,
+                              onChanged: (val) {
+                                setState(() {
+                                  role = val!;
+                                });
+                              },
+                            ),
+                            RadioListTile(
+                              title: Text('Audience'),
+                              value: ClientRoleType.clientRoleAudience,
+                              groupValue: role,
+                              onChanged: (val) {
+                                setState(() {
+                                  role = val!;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () async {
+                              if (context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => VideoCallScreen(
+                                          channelname: channel,
+                                          clientRoleType: role!,
+                                        ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Text('Close'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              );
             },
             icon: Icon(Icons.videocam),
           ),
